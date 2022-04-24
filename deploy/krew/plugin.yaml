@@ -1,0 +1,55 @@
+apiVersion: krew.googlecontainertools.github.com/v1alpha2
+kind: Plugin
+metadata:
+  name: etcdviewer
+spec:
+  version: "v0.1.0"
+  platforms:
+  - selector:
+      matchLabels:
+        os: linux
+        arch: amd64
+    uri: https://github.com/double12gzh/etcdviewer/releases/download/v0.1.0/etcdviewer_linux_amd64.tar.gz
+    sha256: ""
+    files:
+    - from: "./etcdviewer"
+      to: "."
+    - from: LICENSE
+      to: "."
+    bin: "etcdviewer"
+  - selector:
+      matchLabels:
+        os: darwin
+        arch: amd64
+    uri: https://github.com/double12gzh/etcdviewer/releases/download/v0.1.0/etcdviewer_darwin_amd64.tar.gz
+    sha256: ""
+    files:
+    - from: "./etcdviewer"
+      to: "."
+    - from: LICENSE
+      to: "."
+    bin: "etcdviewer"
+  - selector:
+      matchLabels:
+        os: windows
+        arch: amd64
+    uri: https://github.com/double12gzh/etcdviewer/releases/download/v0.1.0/etcdviewer_windows_amd64.zip
+    sha256: ""
+    files:
+    - from: "/etcdviewer.exe"
+      to: "."
+    - from: LICENSE
+      to: "."
+    bin: "etcdviewer.exe"
+  shortDescription: A new etcdviewer
+  homepage: https://github.com/double12gzh/etcdviewer
+  caveats: |
+    Usage:
+      $ kubectl etcdviewer
+
+    For additional options:
+      $ kubectl etcdviewer --help
+      or https://github.com/double12gzh/etcdviewer/blob/v0.1.0/doc/USAGE.md
+
+  description: |
+    This is a plugin to get data from etcd stored by Kubernetes
