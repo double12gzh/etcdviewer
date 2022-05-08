@@ -4,17 +4,18 @@
 package cli
 
 import (
-	"flag"
 	"os"
+	"strings"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"k8s.io/klog/v2"
 
 	"github.com/double12gzh/etcdviewer/options"
+	logger2 "github.com/double12gzh/etcdviewer/pkg/logger"
 )
 
-var etcdViewerOptions = options.NewCmdOptions()
+var logger = logger2.NewLogger()
+var etcdViewerOptions = options.NewEtcdViewerOptions()
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -26,18 +27,29 @@ var rootCmd = &cobra.Command{
 	PreRun: func(cmd *cobra.Command, args []string) {
 		_ = viper.BindPFlags(cmd.Flags())
 	},
-	Run: func(cmd *cobra.Command, args []string) {
-
-	},
 	Example: helper(),
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
 func Execute() {
-	err := rootCmd.Execute()
-	if err != nil {
+	if err := rootCmd.Execute(); err != nil {
+		logger.Error(err)
 		os.Exit(1)
 	}
+}
+
+func init() {
+	cobra.OnInitialize(initConfig)
+
+	// global config for all commands
+	rootCmd.PersistentFlags().StringSliceVar(&etcdViewerOptions.Endpoints, options.ENDPOINTS, []string{}, "etcd endpoints.")
+	rootCmd.PersistentFlags().StringVar(&etcdViewerOptions.CAFile, options.CACERT, "", "etcd cert file.")
+	rootCmd.PersistentFlags().StringVar(&etcdViewerOptions.CertFile, options.CERT, "", "etcd ca file.")
+	rootCmd.PersistentFlags().StringVar(&etcdViewerOptions.KeyFile, options.KEY, "", "etcd key file.")
+
+	_ = rootCmd.MarkFlagRequired(options.CACERT)
+	_ = rootCmd.MarkFlagRequired(options.KEY)
+	_ = rootCmd.MarkFlagRequired(options.CERT)
 }
 
 func helper() string {
@@ -50,33 +62,51 @@ func helper() string {
 
 	Watch data from given path
 	$ etcdviewer watch /resitry/xxx/xxx
-`
 
+	Dump data
+	$ etcdviewer dump
+`
 	return result
 }
 
-func init() {
-	klog.InitFlags(flag.CommandLine)
+func setDefault(etcdViewerOptions *options.EtcdViewerOptions) {
+	if etcdViewerOptions.KeyFile == "" {
+		// get from environment variable: ETCD_VIEWER_KEY
+		etcdViewerOptions.KeyFile = viper.GetString(options.EtcdViewerENVKey)
+		if etcdViewerOptions.KeyFile == "" {
+			etcdViewerOptions.KeyFile = options.DefaultKeyFile
+		}
+	}
 
-	cobra.OnInitialize(initConfig)
+	if etcdViewerOptions.CertFile == "" {
+		// get from environment variable: ETCD_VIEWER_CERT
+		etcdViewerOptions.CertFile = viper.GetString(options.EtcdViewerENVCert)
+		if etcdViewerOptions.CertFile == "" {
+			etcdViewerOptions.CertFile = options.DefaultCertFile
+		}
+	}
 
-	rootCmd.PersistentFlags().AddGoFlagSet(flag.CommandLine)
+	if etcdViewerOptions.CAFile == "" {
+		// get from environment variable: ETCD_VIEWER_CA_CERT
+		etcdViewerOptions.CAFile = viper.GetString(options.EtcdViewerENVCaCert)
+		if etcdViewerOptions.CAFile == "" {
+			etcdViewerOptions.CAFile = options.DefaultCaCertFile
+		}
+	}
 
-	rootCmd.Flags().StringSliceVar(&etcdViewerOptions.Inclusions, options.FlagInclude, []string{"Deployments", "Pods"}, "Filter by resource type (plural form or short name).")
-	rootCmd.Flags().StringSliceVar(&etcdViewerOptions.Exclusions, options.FlagExclude, []string{}, "Filter by resource type (plural form or short name).")
-
-	etcdViewerOptions.GenericCliOptConfigFlags.AddFlags(rootCmd.Flags())
-	etcdViewerOptions.PrintFlags.AddFlags(rootCmd)
-
-	if err := viper.BindPFlags(rootCmd.Flags()); err != nil {
-		klog.Errorf("failed bind flags: %s", err)
+	if len(etcdViewerOptions.Endpoints) == 0 {
+		// get from environment variable: ETCD_VIEWER_ENDPOINTS
+		etcdViewerOptions.Endpoints = viper.GetStringSlice(options.EtcdViewerENVEndpoints)
+		if len(etcdViewerOptions.Endpoints) == 0 {
+			etcdViewerOptions.Endpoints = strings.Split(options.DefaultEndpoints, ",")
+		}
 	}
 }
 
-// initConfig reads in config file and ENV variables if set.
 func initConfig() {
-	// read in environment variables that match
-	viper.SetEnvPrefix("etcdviewer")
+	// setup viper to get value from environment variables
+	viper.SetEnvPrefix(options.EtcdViewerENVPrefix)
 	viper.AutomaticEnv()
-	_ = viper.ReadInConfig()
+	replacer := strings.NewReplacer("-", "_")
+	viper.SetEnvKeyReplacer(replacer)
 }
