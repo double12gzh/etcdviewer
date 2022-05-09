@@ -1,3 +1,4 @@
+![](https://img.shields.io/github/issues/double12gzh/etcdviewer) ![](https://img.shields.io/github/forks/double12gzh/etcdviewer) ![](	https://img.shields.io/github/stars/double12gzh/etcdviewer) ![](https://img.shields.io/github/license/double12gzh/etcdviewer)
 # etcdviewer kubectl
 
 A `kubectl` `etcdviewer` plugin that get or watch Kubernetes data stored in etcd.
